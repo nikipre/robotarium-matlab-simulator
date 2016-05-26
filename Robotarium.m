@@ -5,7 +5,7 @@ classdef Robotarium < APIInterface
     properties(GetAccess = public, SetAccess = private)
         timeStep
         figureHandle
-        S
+        S = 0;
     end
     
     properties(GetAccess = private, SetAccess = private)
