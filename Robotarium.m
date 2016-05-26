@@ -1,7 +1,7 @@
 classdef Robotarium < APIInterface
     %ROBOTARIUM Simulator interface for the Robotarium
     %   Detailed explanation goes here
-    
+     
     properties(GetAccess = public, SetAccess = private)
         timeStep
         figureHandle
