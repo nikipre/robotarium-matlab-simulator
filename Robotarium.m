@@ -90,35 +90,35 @@ classdef Robotarium < APIInterface
             this.InitRobotVisualize();          
             this.saveLength = 0;           
             this.saveEvery = 0;
-            this.iters = 1;            
-            this.prevIters = 1;            
-            this.tempStates = [];  
+            this.iters = 1;
+            this.prevIters = 1;
+            this.tempStates = [];
         end
-                       
+        
         function this = setPositionController(this, controller)
             %SETPOSITIONCONTROLLER Sets the position controller to use for
-            %the simulation 
-            % controller (function): position (go-to-goal) controller 
+            %the simulation
+            % controller (function): position (go-to-goal) controller
             this.positionController = controller;
         end
         
-        function this = setVelocities(this, ids, vs)  
+        function this = setVelocities(this, ids, vs)
             %SETVELOCITIES Sets the velocities of the current agents
             % obj = SETVELOCITIES(identities, velocities)
             % identities: Identities of agents whose velocities to set
             % velocities: Velocities to set
             
-            % Threshold velocities 
+            % Threshold velocities
             
             [~, N] = size(vs);
-                     
+            
             for i = 1:N
-                if(abs(vs(1, i)) > this.maxLinearVelocity) 
-                   vs(1, i) = this.maxLinearVelocity*sign(vs(1,i)); 
+                if(abs(vs(1, i)) > this.maxLinearVelocity)
+                    vs(1, i) = this.maxLinearVelocity*sign(vs(1,i));
                 end
                 
                 if(abs(vs(2, i)) > this.maxAngularVelocity)
-                   vs(2, i) = this.maxAngularVelocity*sign(vs(2, i)); 
+                    vs(2, i) = this.maxAngularVelocity*sign(vs(2, i));
                 end
             end
             
@@ -127,21 +127,21 @@ classdef Robotarium < APIInterface
         
         %Functions for setting positions (go-to-goal behavior)
         
-        function setPositions(this, ids, ps) 
+        function setPositions(this, ids, ps)
             %SETPOSITIONS Sets velocities for the agents via the position
             %controller
-            % obj = SETPOSITIONS(obj, identities, positions) 
+            % obj = SETPOSITIONS(obj, identities, positions)
             % identities: identities of agent positions to set
             % positions: Goal positions of agents 2 x N
             
             this.setVelocities(ids, this.positionController(this.states(:, ids), ps));
         end
         
-        function neighbors = getDDiskNeighbors(this, id, r) 
+        function neighbors = getDDiskNeighbors(this, id, r)
             %GETDDISKNEIGHBORS Gets the neighbors of a particular agent
             %within r distance in the 2 norm
-            % neighbors = GETDDISKNEIGHBORS(obj, identity, radius) 
-            % identity: identy of agent whose neighbors to get 
+            % neighbors = GETDDISKNEIGHBORS(obj, identity, radius)
+            % identity: identy of agent whose neighbors to get
             % radius: radius of delta disk
             
             neighbors = zeros(1, this.numAgents);
@@ -154,10 +154,10 @@ classdef Robotarium < APIInterface
                 end
             end
             
-            if(count == 0) 
+            if(count == 0)
                 neighbors = [];
-            else 
-               neighbors = neighbors(1:count); 
+            else
+                neighbors = neighbors(1:count);
             end
         end
         
@@ -179,10 +179,10 @@ classdef Robotarium < APIInterface
                 end
             end
             
-            if(count == 0) 
+            if(count == 0)
                 neighbors = [];
             else
-                neighbors = neighbors(1:count); 
+                neighbors = neighbors(1:count);
             end
         end
         
@@ -190,141 +190,142 @@ classdef Robotarium < APIInterface
         function poses = getPoses(this)
             poses = this.states(1:3, :);
         end
-         
+        
+        
+        function step(this);
+            if 1 % Turn to zero to ignore collision dynamics
                 
-        function step(this) ;
-            if 1
-                b=[-0.6000    0.6000   -0.3500    0.3500]./1.05;
+                % Collision Dynamics Parameters
                 robotDiameter = 0.03;
-                wheelSlipRobots=0.05; % 0 for no slip, 1 for full slip
-                wheelSlipWall=0.1;
-                slide=0.1;
-                bounce1=0.2;
-                bounce2=0.2;
+                slide = 0.025;
+                bounce1 = 0.02; % bounce away from other agent
+                bounce2 = 0.05; % bounce away from collision wall normal
+                
                 for i = 1:this.numAgents;
-                    Collision=0;
-                    % Find candidate new state for agent i
+                    Collision = 0;
+                    
+                    % Define candidate new state for agent i
                     cx=this.states; % Where the robot has been commanded to go
                     cdx=this.states(4:5,:); % How the robot has been commanded to move
-                    cx(1, i) = this.states(1, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*cos(this.states(3, i)); %
+                    cx(1, i) = this.states(1, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*cos(this.states(3, i));
                     cx(2, i) = this.states(2, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*sin(this.states(3, i));
                     cx(3, i) = this.states(3, i) + this.angularVelocityCoef*this.timeStep.*this.states(5, i);
-                    th=cx(3,i);
-                    Pt=[[1,1,1,1].*cx(1,i);[1,1,1,1].*cx(2,i)]+[cos(th), -sin(th);sin(th),cos(th)]*[0.72,-0.72,-0.72,0.72;.81,.81,-.81,-.81].*robotDiameter;  % Defining Points of Body i
-                    xHati=(Pt(:,4)-Pt(:,3))./(1.62*robotDiameter); % Unit vector going forward in the body frame
+                    th = cx(3,i);
+                    Pt = [[1,1,1,1].*cx(1,i) ; [1,1,1,1].*cx(2,i)] + [cos(th), -sin(th);sin(th),cos(th)]*[0.72,-0.72,-0.72,0.72;.81,.81,-.81,-.81 ].*robotDiameter;  % Defining Points of Body i
+                    xHati = (Pt(:,4)-Pt(:,3))./(1.62*robotDiameter); % Unit vector going forward in the body frame
                     
-                    % Velocity only updated if no collisions are caused
-                    for j=1:this.numAgents; % Overlap Test
-                        if  i~=j;
-                            thj=cx(3,j);
-                            Qt=[[1,1,1,1].*cx(1,j);[1,1,1,1].*cx(2,j)]+[cos(thj), -sin(thj);sin(thj),cos(thj)]*[0.72,-0.72,-0.72,0.72;.81,.81,-.81,-.81].*robotDiameter; % Defining points of body j
-                            rij=(cx(1:2,i)-cx(1:2,j));
-                            if  norm(rij)<2*robotDiameter; % PHASE I
-                                aj=Qt(:,1); bj=Qt(:,2);cj=Qt(:,3);dj=Qt(:,4);Aj=Qt(:,2)-Qt(:,1);Bj=Qt(:,3)-Qt(:,2);Cj=Qt(:,4)-Qt(:,3);Dj=Qt(:,1)-Qt(:,4);
-                                nAj=[0,1;-1,0]*Aj;nBj=[0,1;-1,0]*Bj; nCj=[0,1;-1,0]*Cj;nDj=[0,1;-1,0]*Dj;nj=[nAj,nBj,nCj,nDj];
-                                Aj_mag=norm(Aj);Bj_mag=norm(Bj);Cj_mag=norm(Cj);Dj_mag=norm(Dj);
-                                ai=Pt(:,1);bi=Pt(:,2);ci=Pt(:,3);di=Pt(:,4);Ai=Pt(:,2)-Pt(:,1);Bi=Pt(:,3)-Pt(:,2);Ci=Pt(:,4)-Pt(:,3);Di=Pt(:,1)-Pt(:,4);
-                                nAi=[0,1;-1,0]*Ai;nBi=[0,1;-1,0]*Bi; nCi=[0,1;-1,0]*Ci;nDi=[0,1;-1,0]*Di;ni=[nAj,nBj,nCj,nDj];
-                                Ai_mag=norm(Aj); Bi_mag=norm(Bj);Ci_mag=norm(Cj);Di_mag=norm(Dj);ni=[nAj,nBj,nCj,nDj];
+                    for j = 1:this.numAgents; % Overlap Test
+                        if  i ~= j;
+                            thj = cx(3,j);
+                            Qt = [[1,1,1,1].*cx(1,j) ; [1,1,1,1].*cx(2,j)] + [cos(thj), -sin(thj) ; sin(thj), cos(thj)]*[0.72,-0.72,-0.72,0.72;.81,.81,-.81,-.81].*robotDiameter; % Defining points of body j
+                            rij = (cx(1:2,i) - cx(1:2,j));
+                            if  norm(rij) < 2.04*robotDiameter; % PHASE I
+                                aj=Qt(:,1); bj=Qt(:,2); cj=Qt(:,3); dj=Qt(:,4); Aj=Qt(:,2)-Qt(:,1); Bj=Qt(:,3)-Qt(:,2); Cj=Qt(:,4)-Qt(:,3); Dj=Qt(:,1)-Qt(:,4);
+                                nAj=[0,1;-1,0]*Aj; nBj=[0,1;-1,0]*Bj; nCj=[0,1;-1,0]*Cj; nDj=[0,1;-1,0]*Dj; nj=[nAj,nBj,nCj,nDj];
+                                Aj_mag=norm(Aj); Bj_mag=norm(Bj); Cj_mag=norm(Cj); Dj_mag=norm(Dj);
+                                ai=Pt(:,1); bi=Pt(:,2); ci=Pt(:,3); di=Pt(:,4); Ai=Pt(:,2)-Pt(:,1); Bi=Pt(:,3)-Pt(:,2); Ci=Pt(:,4)-Pt(:,3); Di=Pt(:,1)-Pt(:,4);
+                                nAi=[0,1;-1,0]*Ai; nBi=[0,1;-1,0]*Bi; nCi=[0,1;-1,0]*Ci; nDi=[0,1;-1,0]*Di; ni=[nAj,nBj,nCj,nDj];
+                                Ai_mag=norm(Aj); Bi_mag=norm(Bj); Ci_mag=norm(Cj); Di_mag=norm(Dj); ni=[nAj,nBj,nCj,nDj];
+                                
                                 % Test if any point in i is in j
-                                for k=1:4; % PHASE2 has i entered j
-                                    distVec1=[((Aj(1)*(Pt(2,k)-aj(2)))-Aj(2)*(Pt(1,k)-(aj(1))))/Aj_mag, ((Bj(1)*(Pt(2,k)-bj(2)))-Bj(2)*(Pt(1,k)-(bj(1))))/Bj_mag,...
-                                        ((Cj(1)*(Pt(2,k)-cj(2)))-Cj(2)*(Pt(1,k)-(cj(1))))/Cj_mag, ((Dj(1)*(Pt(2,k)-dj(2)))-Dj(2)*(Pt(1,k)-(dj(1))))/Dj_mag];
-                                    if distVec1(1)>=0 && distVec1(2)>=0 && distVec1(3)>=0 && distVec1(4)>=0; % Collision Case 1 (see notes)
-                                        Collision=1;
-                                        [minnum,minInd]=min(distVec1(:));
-                                        nhatcol=([nj(1,minInd),nj(2,minInd)]'./norm([nj(1,minInd),nj(2,minInd)]));
-                                        WallVec=[0,-1;1,0]*nhatcol; %vector // to wall
-                                        WallVecHat=WallVec/norm(WallVec);
-                                        newVel=dot(cdx(1,i).*xHati,WallVecHat).*WallVecHat*slide+(norm(cdx(1,i)).*nhatcol)*bounce1./2+(rij./norm(rij))*bounce2./3;
+                                for k = 1:4; % PHASE2 has i entered j
+                                    distVec1 = [((Aj(1)*(Pt(2,k)-aj(2)))-Aj(2)*(Pt(1,k)-(aj(1))))/Aj_mag , ((Bj(1)*(Pt(2,k)-bj(2)))-Bj(2)*(Pt(1,k)-(bj(1))))/Bj_mag,...
+                                        ((Cj(1)*(Pt(2,k)-cj(2)))-Cj(2)*(Pt(1,k)-(cj(1))))/Cj_mag , ((Dj(1)*(Pt(2,k)-dj(2)))-Dj(2)*(Pt(1,k)-(dj(1))))/Dj_mag];
+                                    if distVec1(1) >= 0 && distVec1(2) >= 0 && distVec1(3) >= 0 && distVec1(4) >= 0; % Collision Case 1 (see notes)
+                                        Collision = 1;
+                                        [ ~ ,minInd] = min(distVec1(:));
+                                        nhatcol = ([nj(1,minInd),nj(2,minInd)]'./norm([nj(1,minInd),nj(2,minInd)])); % unit vector normal to wall of collision
+                                        WallVec = [0,-1;1,0]*nhatcol; % vector // to wall
+                                        WallVecHat = WallVec/norm(WallVec); % unit vector // to wall
+                                        newVel = dot(cdx(1,i).*xHati,WallVecHat).*WallVecHat*slide+(norm(cdx(1,i)).*nhatcol)*bounce1./2+(rij./norm(rij))*bounce2./3;
                                         
+                                        % Update candidate states with the collision dynamics taken into consideration
                                         cx(1, i) = this.states(1, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*newVel(1);
                                         cx(2, i) = this.states(2, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*newVel(2);
                                         cx(3, i) = this.states(3, i) + (rand-0.5)./80;
+                                        th = cx(3,i);
+                                        Pt = [[1,1,1,1].*cx(1,i);[1,1,1,1].*cx(2,i)] + [cos(th), -sin(th);sin(th),cos(th)]*[0.8,-0.8,-0.8,0.8;.9,.9,-.9,-.9].* 0.9*robotDiameter ; % Defining Points of Body i
                                         
-                                        th=cx(3,i);
-                                        Pt=[[1,1,1,1].*cx(1,i);[1,1,1,1].*cx(2,i)]+[cos(th), -sin(th);sin(th),cos(th)]*[0.8,-0.8,-0.8,0.8;.9,.9,-.9,-.9].* 0.9*robotDiameter ; % Defining Points of Body i
-                                        
-                                        penalty=((norm(dot(cdx(1,i).*xHati,-nhatcol)))^2)./this.numAgents;
-                                        this.S=this.S+penalty;
+                                        % Add penalty for trying to collide
+                                        penalty = ((norm(dot(cdx(1,i).*xHati,-nhatcol)))^2)./this.numAgents;
+                                        this.S = this.S + penalty;
                                         
                                         % Agent i now has a new position, we need to run the same tests over again to check if the NEW position is going to cause a collision
                                         % If it does then don't update
-                                        for j2=1:this.numAgents; % Overlap Test: has i entered (some other) j
-                                            if  i~=j2;
-                                                thj2=cx(3,j2);
-                                                Qt=[[1,1,1,1].*cx(1,j2);[1,1,1,1].*cx(2,j2)]+[cos(thj2), -sin(thj2);sin(thj2),cos(thj2)]*[0.8,-0.8,-0.8,0.8;.9,.9,-.9,-.9].* 0.9*robotDiameter; % Defining points of body j
-                                                rij=(cx(1:2,i)-cx(1:2,j2));
-                                                if norm(cx(1:2,i)-cx(1:2,j2))<2.0*robotDiameter; % PHASE I
-                                                    aj=Qt(:,1); bj=Qt(:,2);cj=Qt(:,3);dj=Qt(:,4);Aj=Qt(:,2)-Qt(:,1);Bj=Qt(:,3)-Qt(:,2);Cj=Qt(:,4)-Qt(:,3);Dj=Qt(:,1)-Qt(:,4);
-                                                    nAj=[0,1;-1,0]*Aj;nBj=[0,1;-1,0]*Bj; nCj=[0,1;-1,0]*Cj;nDj=[0,1;-1,0]*Dj;nj=[nAj,nBj,nCj,nDj];
-                                                    Aj_mag=norm(Aj);Bj_mag=norm(Bj);Cj_mag=norm(Cj);Dj_mag=norm(Dj);
-                                                    ai=Pt(:,1);bi=Pt(:,2);ci=Pt(:,3);di=Pt(:,4);Ai=Pt(:,2)-Pt(:,1);Bi=Pt(:,3)-Pt(:,2);Ci=Pt(:,4)-Pt(:,3);Di=Pt(:,1)-Pt(:,4);
-                                                    nAi=[0,1;-1,0]*Ai;nBi=[0,1;-1,0]*Bi; nCi=[0,1;-1,0]*Ci;nDi=[0,1;-1,0]*Di;ni=[nAj,nBj,nCj,nDj];
-                                                    Ai_mag=norm(Aj); Bi_mag=norm(Bj);Ci_mag=norm(Cj);Di_mag=norm(Dj);ni=[nAj,nBj,nCj,nDj];
+                                        for j2 = 1:this.numAgents; % Overlap Test: has i entered (some other) j
+                                            
+                                            if  i ~= j2;
+                                                thj2 = cx(3,j2);
+                                                Qt = [[1,1,1,1].*cx(1,j2);[1,1,1,1].*cx(2,j2)] + [cos(thj2), -sin(thj2);sin(thj2),cos(thj2)]*[0.8,-0.8,-0.8,0.8;.9,.9,-.9,-.9].* 0.9*robotDiameter; % Defining points of body j
+                                                rij = (cx(1:2,i)-cx(1:2,j2));
+                                                
+                                                if norm(cx(1:2,i)-cx(1:2,j2)) < 2.04*robotDiameter; % PHASE I
+                                                    aj=Qt(:,1); bj=Qt(:,2); cj=Qt(:,3); dj=Qt(:,4); Aj=Qt(:,2)-Qt(:,1); Bj=Qt(:,3)-Qt(:,2); Cj=Qt(:,4)-Qt(:,3); Dj=Qt(:,1)-Qt(:,4);
+                                                    nAj=[0,1;-1,0]*Aj; nBj=[0,1;-1,0]*Bj; nCj=[0,1;-1,0]*Cj; nDj=[0,1;-1,0]*Dj; nj=[nAj,nBj,nCj,nDj];
+                                                    Aj_mag=norm(Aj); Bj_mag=norm(Bj); Cj_mag=norm(Cj); Dj_mag=norm(Dj);
+                                                    ai=Pt(:,1); bi=Pt(:,2); ci=Pt(:,3); di=Pt(:,4); Ai=Pt(:,2)-Pt(:,1); Bi=Pt(:,3)-Pt(:,2); Ci=Pt(:,4)-Pt(:,3); Di=Pt(:,1)-Pt(:,4);
+                                                    nAi=[0,1;-1,0]*Ai; nBi=[0,1;-1,0]*Bi; nCi=[0,1;-1,0]*Ci; nDi=[0,1;-1,0]*Di; ni=[nAj,nBj,nCj,nDj];
+                                                    Ai_mag=norm(Aj); Bi_mag=norm(Bj); Ci_mag=norm(Cj); Di_mag=norm(Dj); ni=[nAj,nBj,nCj,nDj];
                                                     
                                                     % Test if any point in i is in j or if any j has entered i
-                                                    for k=1:4; % PHASE2 has i entered j
-                                                        distVec1=[((Aj(1)*(Pt(2,k)-aj(2)))-Aj(2)*(Pt(1,k)-(aj(1))))/Aj_mag, ((Bj(1)*(Pt(2,k)-bj(2)))-Bj(2)*(Pt(1,k)-(bj(1))))/Bj_mag,...
-                                                            ((Cj(1)*(Pt(2,k)-cj(2)))-Cj(2)*(Pt(1,k)-(cj(1))))/Cj_mag, ((Dj(1)*(Pt(2,k)-dj(2)))-Dj(2)*(Pt(1,k)-(dj(1))))/Dj_mag];
-                                                        distVec2=[((Ai(1)*(Qt(2,k)-ai(2)))-Ai(2)*(Qt(1,k)-(ai(1))))/Ai_mag, ((Bi(1)*(Qt(2,k)-bi(2)))-Bi(2)*(Qt(1,k)-(bi(1))))/Bi_mag,...
-                                                            ((Ci(1)*(Qt(2,k)-ci(2)))-Ci(2)*(Qt(1,k)-(ci(1))))/Ci_mag, ((Di(1)*(Qt(2,k)-di(2)))-Di(2)*(Qt(1,k)-(di(1))))/Di_mag];
+                                                    for k = 1:4; % PHASE2 has i entered j
+                                                        distVec1 = [((Aj(1)*(Pt(2,k)-aj(2)))-Aj(2)*(Pt(1,k)-(aj(1))))/Aj_mag , ((Bj(1)*(Pt(2,k)-bj(2)))-Bj(2)*(Pt(1,k)-(bj(1))))/Bj_mag,...
+                                                            ((Cj(1)*(Pt(2,k)-cj(2)))-Cj(2)*(Pt(1,k)-(cj(1))))/Cj_mag , ((Dj(1)*(Pt(2,k)-dj(2)))-Dj(2)*(Pt(1,k)-(dj(1))))/Dj_mag];
+                                                        distVec2 = [((Ai(1)*(Qt(2,k)-ai(2)))-Ai(2)*(Qt(1,k)-(ai(1))))/Ai_mag, ((Bi(1)*(Qt(2,k)-bi(2)))-Bi(2)*(Qt(1,k)-(bi(1))))/Bi_mag,...
+                                                            ((Ci(1)*(Qt(2,k)-ci(2)))-Ci(2)*(Qt(1,k)-(ci(1))))/Ci_mag , ((Di(1)*(Qt(2,k)-di(2)))-Di(2)*(Qt(1,k)-(di(1))))/Di_mag];
                                                         
-                                                        if distVec1(1)>=0 && distVec1(2)>=0 && distVec1(3)>=0 && distVec1(4)>=0; % Collision Case 1 (see notes)
-                                                            Collision=3;
-                                                        elseif distVec2(1)>=0 && distVec2(2)>=0 && distVec2(3)>=0 && distVec2(4)>=0; % Collision Case 2 (see notes)
-                                                            Collision=4;
+                                                        if distVec1(1) >= 0 && distVec1(2) >= 0 && distVec1(3) >= 0 && distVec1(4) >= 0; % Collision Case 1 (see notes)
+                                                            Collision = 3;
+                                                        elseif distVec2(1) >= 0 && distVec2(2) >= 0 && distVec2(3) >= 0 && distVec2(4) >= 0; % Collision Case 2 (see notes)
+                                                            Collision = 4;
                                                         end
                                                     end
                                                 end
                                             end
                                         end % End if j loop: every other robot tested with i
-                                        
                                     else
-                                        distVec2=[((Ai(1)*(Qt(2,k)-ai(2)))-Ai(2)*(Qt(1,k)-(ai(1))))/Ai_mag, ((Bi(1)*(Qt(2,k)-bi(2)))-Bi(2)*(Qt(1,k)-(bi(1))))/Bi_mag,...
-                                            ((Ci(1)*(Qt(2,k)-ci(2)))-Ci(2)*(Qt(1,k)-(ci(1))))/Ci_mag, ((Di(1)*(Qt(2,k)-di(2)))-Di(2)*(Qt(1,k)-(di(1))))/Di_mag];
+                                        distVec2 = [((Ai(1)*(Qt(2,k)-ai(2)))-Ai(2)*(Qt(1,k)-(ai(1))))/Ai_mag , ((Bi(1)*(Qt(2,k)-bi(2)))-Bi(2)*(Qt(1,k)-(bi(1))))/Bi_mag,...
+                                            ((Ci(1)*(Qt(2,k)-ci(2)))-Ci(2)*(Qt(1,k)-(ci(1))))/Ci_mag , ((Di(1)*(Qt(2,k)-di(2)))-Di(2)*(Qt(1,k)-(di(1))))/Di_mag];
                                         
-                                        if distVec2(1)>=0 && distVec2(2)>=0 && distVec2(3)>=0 && distVec2(4)>=0; % Collision Case 2 (see notes)
-                                            Collision=2;
-                                            [minnum,minInd]=min(distVec1(:));
-                                            nhatcol=([nj(1,minInd),nj(2,minInd)]'./norm([nj(1,minInd),nj(2,minInd)]));
-                                            WallVec=[0,-1;1,0]*nhatcol; %vector // to wall
-                                            WallVecHat=WallVec/norm(WallVec);
-                                            
+                                        if distVec2(1) >= 0 && distVec2(2) >= 0 && distVec2(3) >= 0 && distVec2(4) >=0; % Collision Case 2 (see notes)
+                                            Collision = 2;
+                                            [ ~ ,minInd] = min(distVec1(:));
+                                            nhatcol = ([nj(1,minInd),nj(2,minInd)]'./norm([nj(1,minInd),nj(2,minInd)]));
+                                            WallVec = [0,-1;1,0]*nhatcol;
+                                            WallVecHat = WallVec/norm(WallVec);
                                             newVel=dot(cdx(1,i).*xHati,-WallVecHat).*WallVecHat*slide+(norm(cdx(1,i)).*nhatcol)*bounce1+(rij./norm(rij))*bounce2;
+                                            cx(1, i) = this.states(1, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*newVel(1);
+                                            cx(2, i) = this.states(2, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*newVel(2);
+                                            cx(3, i) = this.states(3, i) + (rand-0.5)./80;
                                             
-                                            cx(1, i) = this.states(1, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*newVel(1);%+ this.linearVelocityCoef*this.timeStep.*this.states(4, i).*cos(this.states(3, i));
-                                            cx(2, i) = this.states(2, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*newVel(2);%+ this.linearVelocityCoef*this.timeStep.*this.states(4, i).*sin(this.states(3, i));
-                                            cx(3, i) = this.states(3, i) + (rand-0.5)./80;;
+                                            % Add penalty for trying to collide
+                                            penalty = ((norm(dot(cdx(1,i).*xHati,nhatcol)))^2)./this.numAgents;
+                                            this.S = this.S + (penalty);
                                             
-                                            penalty=((norm(dot(cdx(1,i).*xHati,nhatcol)))^2)./this.numAgents; 
-                                            this.S=this.S+(penalty);
+                                            th = cx(3,i);
+                                            Pt = [[1,1,1,1].*cx(1,i);[1,1,1,1].*cx(2,i)]+[cos(th), -sin(th);sin(th),cos(th)]*[0.8,-0.8,-0.8,0.8;.9,.9,-.9,-.9].* 0.9*robotDiameter ; % Defining Points of Body i
                                             
-                                            th=cx(3,i);
-                                            Pt=[[1,1,1,1].*cx(1,i);[1,1,1,1].*cx(2,i)]+[cos(th), -sin(th);sin(th),cos(th)]*[0.8,-0.8,-0.8,0.8;.9,.9,-.9,-.9].* 0.9*robotDiameter ; % Defining Points of Body i
-                                            
-                                            for j=1:this.numAgents; % Overlap Test
-                                                if  i~=j;
-                                                    thj=cx(3,j);
-                                                    Qt=[[1,1,1,1].*cx(1,j);[1,1,1,1].*cx(2,j)]+[cos(thj), -sin(thj);sin(thj),cos(thj)]*[0.8,-0.8,-0.8,0.8;.9,.9,-.9,-.9].* 0.9*robotDiameter; % Defining points of body j
-                                                    rij=(cx(1:2,i)-cx(1:2,j));
-                                                    if norm(rij)<2.0*robotDiameter; % PHASE I
-                                                        
-                                                        aj=Qt(:,1); bj=Qt(:,2);cj=Qt(:,3);dj=Qt(:,4);Aj=Qt(:,2)-Qt(:,1);Bj=Qt(:,3)-Qt(:,2);Cj=Qt(:,4)-Qt(:,3);Dj=Qt(:,1)-Qt(:,4);
-                                                        Aj_mag=norm(Aj);Bj_mag=norm(Bj);Cj_mag=norm(Cj);Dj_mag=norm(Dj);
-                                                        ai=Pt(:,1);bi=Pt(:,2);ci=Pt(:,3);di=Pt(:,4);Ai=Pt(:,2)-Pt(:,1);Bi=Pt(:,3)-Pt(:,2);Ci=Pt(:,4)-Pt(:,3);Di=Pt(:,1)-Pt(:,4);
-                                                        Ai_mag=norm(Aj); Bi_mag=norm(Bj);Ci_mag=norm(Cj);Di_mag=norm(Dj);ni=[nAj,nBj,nCj,nDj];
+                                            for j = 1:this.numAgents; % Overlap Test
+                                                if  i ~= j;
+                                                    thj = cx(3,j);
+                                                    Qt = [[1,1,1,1].*cx(1,j) ; [1,1,1,1].*cx(2,j)] + [cos(thj), -sin(thj) ; sin(thj), cos(thj)]*[0.8,-0.8,-0.8,0.8;.9,.9,-.9,-.9].* 0.9*robotDiameter; % Defining points of body j
+                                                    rij = (cx(1:2,i) - cx(1:2,j));
+                                                    if norm(rij) < 2.04*robotDiameter; % PHASE I
+                                                        aj=Qt(:,1); bj=Qt(:,2); cj=Qt(:,3); dj=Qt(:,4); Aj=Qt(:,2)-Qt(:,1); Bj=Qt(:,3)-Qt(:,2); Cj=Qt(:,4)-Qt(:,3); Dj=Qt(:,1)-Qt(:,4);
+                                                        Aj_mag=norm(Aj); Bj_mag=norm(Bj); Cj_mag=norm(Cj); Dj_mag=norm(Dj);
+                                                        ai=Pt(:,1); bi=Pt(:,2); ci=Pt(:,3); di=Pt(:,4); Ai=Pt(:,2)-Pt(:,1); Bi=Pt(:,3)-Pt(:,2); Ci=Pt(:,4)-Pt(:,3); Di=Pt(:,1)-Pt(:,4);
+                                                        Ai_mag=norm(Aj); Bi_mag=norm(Bj); Ci_mag=norm(Cj); Di_mag=norm(Dj); ni=[nAj,nBj,nCj,nDj];
                                                         
                                                         % Test if any point in i is in j
-                                                        for k=1:4; % PHASE2 has i entered j
-                                                            distVec1=[((Aj(1)*(Pt(2,k)-aj(2)))-Aj(2)*(Pt(1,k)-(aj(1))))/Aj_mag, ((Bj(1)*(Pt(2,k)-bj(2)))-Bj(2)*(Pt(1,k)-(bj(1))))/Bj_mag,...
+                                                        for k = 1:4; % PHASE2 has i entered j
+                                                            distVec1 = [((Aj(1)*(Pt(2,k)-aj(2)))-Aj(2)*(Pt(1,k)-(aj(1))))/Aj_mag, ((Bj(1)*(Pt(2,k)-bj(2)))-Bj(2)*(Pt(1,k)-(bj(1))))/Bj_mag,...
                                                                 ((Cj(1)*(Pt(2,k)-cj(2)))-Cj(2)*(Pt(1,k)-(cj(1))))/Cj_mag, ((Dj(1)*(Pt(2,k)-dj(2)))-Dj(2)*(Pt(1,k)-(dj(1))))/Dj_mag];
-                                                            distVec2=[((Ai(1)*(Qt(2,k)-ai(2)))-Ai(2)*(Qt(1,k)-(ai(1))))/Ai_mag, ((Bi(1)*(Qt(2,k)-bi(2)))-Bi(2)*(Qt(1,k)-(bi(1))))/Bi_mag,...
+                                                            distVec2 = [((Ai(1)*(Qt(2,k)-ai(2)))-Ai(2)*(Qt(1,k)-(ai(1))))/Ai_mag, ((Bi(1)*(Qt(2,k)-bi(2)))-Bi(2)*(Qt(1,k)-(bi(1))))/Bi_mag,...
                                                                 ((Ci(1)*(Qt(2,k)-ci(2)))-Ci(2)*(Qt(1,k)-(ci(1))))/Ci_mag, ((Di(1)*(Qt(2,k)-di(2)))-Di(2)*(Qt(1,k)-(di(1))))/Di_mag];
-                                                            if distVec1(1)>=0 && distVec1(2)>=0 && distVec1(3)>=0 && distVec1(4)>=0; % Collision Case 1 (see notes)
-                                                                Collision=5;
-                                                            elseif distVec2(1)>=0 && distVec2(2)>=0 && distVec2(3)>=0 && distVec2(4)>=0; % Collision Case 2 (see notes)
-                                                                Collision=6;
+                                                            if distVec1(1) >= 0 && distVec1(2) >= 0 && distVec1(3) >= 0 && distVec1(4) >= 0; % Collision Case 1 (see notes)
+                                                                Collision = 5;
+                                                            elseif distVec2(1) >= 0 && distVec2(2) >= 0 && distVec2(3) >= 0 && distVec2(4) >= 0; % Collision Case 2 (see notes)
+                                                                Collision = 6;
                                                             end
                                                         end
                                                         
@@ -338,12 +339,11 @@ classdef Robotarium < APIInterface
                         end
                     end % End if j loop: every other robot tested with i
                     
-                    if Collision==0 % Iff the new velocity will not cause collision then update
-                        Collision;
+                    if Collision == 0  % Iff the new velocity will not cause collision then update
                         this.states(1, i) = cx(1,i);
                         this.states(2, i) = cx(2,i);
                         this.states(3, i) = cx(3,i);
-                    elseif Collision==1 || Collision==2
+                    elseif Collision == 1 || Collision == 2
                         this.states(1, i) = cx(1,i);
                         this.states(2, i) = cx(2,i);
                         this.states(3, i) = cx(3,i);
@@ -351,46 +351,26 @@ classdef Robotarium < APIInterface
                     this.save();
                     this.drawRobots();
                 end % Robot i's Velocity Updated Only if It will not cause a collision
-                    pause(0.0005)
-            
-            else % Collision Simulation Turned Off
-            %Vectorize update to states
-            i = 1:this.numAgents;
-            
-            %Update velocities using unicycle dynamics 
-             this.states(1,i)= this.states(1, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*cos(this.states(3, i));
-             this.states(2,i)= this.states(2, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*sin(this.states(3, i));
-             this.states(3,i) = this.states(3, i) + this.angularVelocityCoef*this.timeStep.*this.states(5, i);
+                pause(0.001)
                 
-            %Ensure that we're in the right range
-            %this.states(3, i) = atan2(sin(this.states(3, i)) , cos(this.states(3, i)));
-            this.save();
-            this.drawRobots();
-            pause(this.timeStep); 
+            else % Collision Simulation Turned Off
+                %Vectorize update to states
+                i = 1:this.numAgents;
+                
+                %Update velocities using unicycle dynamics
+                this.states(1,i) = this.states(1, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*cos(this.states(3, i));
+                this.states(2,i) = this.states(2, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*sin(this.states(3, i));
+                this.states(3,i) = this.states(3, i) + this.angularVelocityCoef*this.timeStep.*this.states(5, i);
+                
+                %Ensure that we're in the right range
+                %this.states(3, i) = atan2(sin(this.states(3, i)) , cos(this.states(3, i)));
+                this.save();
+                this.drawRobots();
+                pause(this.timeStep);
             end
-         end
-           
-        %{
-        function step(this)         
-                      
-            %Vectorize update to states
-            i = 1:this.numAgents;
-            
-            %Update velocities using unicycle dynamics 
-            this.states(1, i) = this.states(1, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*cos(this.states(3, i));
-            this.states(2, i) = this.states(2, i) + this.linearVelocityCoef*this.timeStep.*this.states(4, i).*sin(this.states(3, i));
-            this.states(3, i) = this.states(3, i) + this.angularVelocityCoef*this.timeStep.*this.states(5, i);            
-            
-            %Ensure that we're in the right range
-            this.states(3, i) = atan2(sin(this.states(3, i)) , cos(this.states(3, i)));
-            
-            this.save();
-            this.drawRobots();
-            pause(this.timeStep); 
         end
-        %}
         
-        function numAgents = getAvailableAgents(this) 
+        function numAgents = getAvailableAgents(this)
             numAgents = this.numAgents;
         end
         
