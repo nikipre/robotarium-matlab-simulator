@@ -1,8 +1,8 @@
-%Initializing the agents to random positions with barrier certificates 
-%and data plotting.  This script shows how to initialize robots to a
-%particular point
+%This script shows how to initialize robots to a particular point
 %Paul Glotfelter 
 %3/24/2016
+
+%% Initialize objects
 
 % Get Robotarium object used to communicate with the robots/simulator
 rb = RobotariumBuilder();
@@ -23,13 +23,13 @@ r.step();
 
         
 %Get randomized initial conditions in the robotarium arena
-initial_conditions = generate_initial_conditions(N, 'Width', r.boundaries(2)-r.boundaries(1)-0.1, 'Height', r.boundaries(4)-r.boundaries(3)-0.1, 'Spacing', 0.2);
+initial_conditions = generate_initial_conditions(N, 'Width', r.boundaries(2)-r.boundaries(1)-0.1, 'Height', r.boundaries(4)-r.boundaries(3)-0.1, 'Spacing', 0.3);
 
 % We'll make the rotation error huge so that the initialization checker
 % doesn't care about it
-args = {'PositionError', 0.01, 'RotationError', 50};
-init_checker = create_is_initialized(args{:});
-controller = create_si_position_controller();
+init_checker = create_is_initialized('PositionError', 0.01, 'RotationError', 50);
+
+%% Algorithm
 
 % We add on the zeros, because the state from a point-controlled agent is 2
 % dimensional.  The init-checker function needs a 3-dimensional state
@@ -40,6 +40,8 @@ while(~init_checker([x ; zeros(1, N)], initial_conditions))
     r.set_inputs(1:N, initial_conditions(1:2, :));
     r.step();   
 end
+
+%% Misc
 
 % Though we didn't save any data, we still should call r.call_at_scripts_end() after our
 % experiment is over!
