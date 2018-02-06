@@ -49,7 +49,7 @@ for t = 1:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
-    x = r.get_poses();
+    x = r.get_states();
     
     %% Algorithm
   

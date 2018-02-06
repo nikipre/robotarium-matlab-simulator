@@ -21,6 +21,10 @@ N = rb.get_available_agents();
 r = rb.build('NumberOfAgents', N, 'Dynamics', 'SingleIntegrator', ... 
     'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
+%% Get any extra utilities that we need
+
+si_pos_controller = create_si_position_controller();
+
 %% Create the desired Laplacian
 
 %Graph laplacian

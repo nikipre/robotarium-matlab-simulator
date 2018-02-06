@@ -18,7 +18,7 @@ r = rb.build('NumberOfAgents', N, 'Dynamics', 'PointControlled', ...
 
 % Initialize x so that we don't run into problems later.  This isn't always
 % necessary
-x = r.get_poses();
+x = r.get_states();
 r.step();
 
         
@@ -31,9 +31,11 @@ args = {'PositionError', 0.01, 'RotationError', 50};
 init_checker = create_is_initialized(args{:});
 controller = create_si_position_controller();
 
-while(~init_checker(x, initial_conditions))
+% We add on the zeros, because the state from a point-controlled agent is 2
+% dimensional.  The init-checker function needs a 3-dimensional state
+while(~init_checker([x ; zeros(1, N)], initial_conditions))
 
-    x = r.get_poses();
+    x = r.get_states();
 
     r.set_inputs(1:N, initial_conditions(1:2, :));
     r.step();   

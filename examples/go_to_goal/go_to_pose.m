@@ -18,11 +18,11 @@ r = rb.build('NumberOfAgents', N, 'Dynamics', 'PoseControlled', ...
 
 % Initialize x so that we don't run into problems later.  This isn't always
 % necessary
-x = r.get_poses();
+x = r.get_states();
 r.step();
         
 %Get randomized initial conditions in the robotarium arena
-initial_conditions = generate_initial_conditions(N, 'Width', r.boundaries(2), 'Height', r.boundaries(4), 'Spacing', 0.2);
+initial_conditions = generate_initial_conditions(N, 'Width', r.boundaries(2), 'Height', r.boundaries(4), 'Spacing', 0.3);
 
 args = {'PositionError', 0.02, 'RotationError', 0.3};
 init_checker = create_is_initialized(args{:});
@@ -30,7 +30,7 @@ automatic_parker = create_automatic_parking_controller(args{:});
 
 while(~init_checker(x, initial_conditions))
 
-    x = r.get_poses();    
+    x = r.get_states();    
 
     r.set_inputs(1:N, initial_conditions);
     r.step();   

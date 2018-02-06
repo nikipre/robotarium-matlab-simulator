@@ -15,7 +15,8 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
-r = rb.set_number_of_agents(N).set_show_figure(true).set_save_data(false).build();
+r = rb.build('NumberOfAgents', N, 'Dynamics', 'PointControlled', ...
+'CollisionAvoidance', true, 'ShowFigure', true, 'SaveData', true);
 
 % This is a totally arbitrary number
 iterations = 20000;
@@ -37,15 +38,6 @@ x_goal = p_circ(:,1:N);
 
 flag = 0; %flag of task completion
 
-%% Retrieve tools for single-integrator -> unicycle mapping
-
-% Let's retrieve some of the tools we'll need.  We would like a
-% single-integrator position controller, a single-integrator barrier
-% function, and a mapping from single-integrator to unicycle dynamics
-position_int = create_si_position_controller('XVelocityGain', 2, 'YVelocityGain', 2);
-si_barrier_certificate = create_si_barrier_certificate('SafetyRadius', 0.1);
-si_to_uni_dyn = create_si_to_uni_mapping2('LinearVelocityGain', 0.75, 'AngularVelocityLimit', pi);
-
 %% Begin the experiment
 % This section contains the actual implementation of the barrier
 % certificate experiment.
@@ -55,7 +47,7 @@ for t = 1:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
-    x = r.get_poses();
+    x = r.get_states();
     
     x_temp = x(1:2,:);
     
@@ -73,36 +65,8 @@ for t = 1:iterations
         x_goal = p_circ(:,N+1:2*N);
     end
         
-    % Use a single-integrator position controller to drive the agents to
-    % the circular formation
-    dx = position_int(x(1:2, :), x_goal);
-    
-    %%
-    % Normalization of controls.  This code ensures that
-    %%
-    % $$
-    %   \|dxu\| \leq dmax
-    % $$
-    dxmax = 0.1;
-    for i = 1:N
-        if norm(dx(:,i)) > dxmax
-            dx(:,i) = dx(:,i)/norm(dx(:,i))*dxmax;
-        end
-    end
-
-    %% Apply barrier certs. and map to unicycle dynamics
-    
-    %Ensure the robots don't collide
-    dx = si_barrier_certificate(dx, x);
-    
-    % Transform the single-integrator dynamics to unicycle dynamics using a
-    % diffeomorphism, which can be found in the utilities
-    dx = si_to_uni_dyn(dx, x);        
-
-    %% Set the velocities of the agents    
-
     % Set velocities of agents 1,...,N
-    r.set_velocities(1:N, dx);
+    r.set_inputs(1:N, x_goal);
     
     % Send the previously set velocities to the agents.  This function must be called!
     r.step();    
