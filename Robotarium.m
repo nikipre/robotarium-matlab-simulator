@@ -33,16 +33,16 @@ classdef Robotarium < ARobotarium
 
     methods
 
-        function this = Robotarium(number_of_agents, save_data, show_figure, initial_poses)
-            this = this@ARobotarium(number_of_agents, save_data, show_figure, initial_poses);
+        function this = Robotarium(number_of_agents, save_data, show_figure, initial_poses, dynamics_transform, state_transform)
+            this = this@ARobotarium(number_of_agents, save_data, show_figure, initial_poses, dynamics_transform, state_transform);
             this.previous_timestep = tic;
         end
 
-        function poses = get_poses(this)
+        function states = get_states(this)
 
             assert(~this.checked_poses_already, 'Can only call get_poses() once per call of step()!');
 
-            poses = this.poses;
+            states = this.state_transform(this.poses);
 
             %Include delay to mimic behavior of real system
             this.previous_timestep = tic;

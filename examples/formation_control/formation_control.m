@@ -15,13 +15,11 @@ N = 6;
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
-r = rb.set_number_of_agents(N).set_save_data(false).build();
+r = rb.build('NumberOfAgents', N, 'Dynamics', 'SingleIntegrator', ... 
+    'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
 %% Set up constants for experiment
 
-%Gains for the transformation from single-integrator to unicycle dynamics
-linearVelocityGain = 1; 
-angularVelocityGain = pi/2;
 formationControlGain = 4;
 
 % Select the number of iterations for the experiment.  This value is
@@ -56,20 +54,13 @@ weights = [ 0 d 0 d 0 ddiag; ...
 % velocity vector containing the linear and angular velocity, respectively.
 dx = zeros(2, N);
 
-%% Grab tools for converting to single-integrator dynamics and ensuring safety 
-
-si_barrier_cert = create_si_barrier_certificate('SafetyRadius', 0.08);
-si_to_uni_dyn = create_si_to_uni_mapping2('LinearVelocityGain', linearVelocityGain, ... 
-    'AngularVelocityLimit', angularVelocityGain);
-
-
 % Iterate for the previously specified number of iterations
 for t = 0:iterations
     
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
-    x = r.get_poses();
+    x = r.get_states();
     
     %% Algorithm
     
@@ -95,12 +86,8 @@ for t = 0:iterations
         end 
     end
     
-    % Transform the single-integrator dynamics to unicycle dynamics using a provided utility function
-    dx = si_barrier_cert(dx, x);
-    dx = si_to_uni_dyn(dx, x);  
-    
     % Set velocities of agents 1:N
-    r.set_velocities(1:N, dx);
+    r.set_inputs(1:N, dx);
     
     % Send the previously set velocities to the agents.  This function must be called!
     r.step();   

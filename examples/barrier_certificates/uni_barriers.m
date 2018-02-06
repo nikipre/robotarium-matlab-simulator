@@ -13,7 +13,8 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
-r = rb.set_number_of_agents(N).set_save_data(false).build();
+r = rb.build('NumberOfAgents', N, 'Dynamics', 'Unicycle', ...
+'CollisionAvoidance', true, 'ShowFigure', true, 'SaveData', true);
 
 %Run the simulation for a specific number of iterations
 iterations = 2000;
@@ -39,9 +40,6 @@ safety = 0.05;
 
 % Get the tools we need to map from single-integrator
 [si_to_uni_dyn, uni_to_si_states] = create_si_to_uni_mapping('ProjectionDistance', lambda);
-
-% Grab barrier certificates for unicycle dynamics
-uni_barrier_cert = create_uni_barrier_certificate('SafetyRadius', safety, 'ProjectionDistance', lambda);
 
 % Grab a position controller for single-integrator systems
 si_pos_controller = create_si_position_controller();
@@ -82,13 +80,10 @@ for t = 1:iterations
     end
     
     % Map to unicycle dynamics
-    dx = si_to_uni_dyn(dx, x);    
-    
-    %Ensure the robots don't collide
-    dx = uni_barrier_cert(dx, x);    
+    dx = si_to_uni_dyn(dx, x);      
     
     % Set velocities of agents 1,...,N
-    r.set_velocities(1:N, dx);
+    r.set_inputs(1:N, dx);
     
     % Send the previously set velocities to the agents.  This function must be called!
     r.step();

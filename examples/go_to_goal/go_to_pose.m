@@ -13,34 +13,26 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
-r = rb.set_number_of_agents(N).set_save_data(false).build();
+r = rb.build('NumberOfAgents', N, 'Dynamics', 'PoseControlled', ...
+'CollisionAvoidance', true, 'ShowFigure', true, 'SaveData', true);
 
 % Initialize x so that we don't run into problems later.  This isn't always
 % necessary
 x = r.get_poses();
 r.step();
-
-% Set some parameters for use with the barrier certificates.  We don't want
-% our agents to collide
-
-% Create a barrier certificate for use with the above parameters 
-unicycle_barrier_certificate = create_uni_barrier_certificate('SafetyRadius', 0.06, ... 
-    'ProjectionDistance', 0.03);
         
 %Get randomized initial conditions in the robotarium arena
 initial_conditions = generate_initial_conditions(N, 'Width', r.boundaries(2), 'Height', r.boundaries(4), 'Spacing', 0.2);
 
-args = {'PositionError', 0.01, 'RotationError', 0.1};
+args = {'PositionError', 0.02, 'RotationError', 0.3};
 init_checker = create_is_initialized(args{:});
 automatic_parker = create_automatic_parking_controller(args{:});
 
 while(~init_checker(x, initial_conditions))
 
-    x = r.get_poses();
-    dxu = automatic_parker(x, initial_conditions);
-    dxu = unicycle_barrier_certificate(dxu, x);      
+    x = r.get_poses();    
 
-    r.set_velocities(1:N, dxu);
+    r.set_inputs(1:N, initial_conditions);
     r.step();   
 end
 

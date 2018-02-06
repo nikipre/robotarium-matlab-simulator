@@ -16,13 +16,17 @@ classdef ARobotarium < handle
         mat_file_path
         boundary_patch
         boundary_points = {[-1.5, 1.5, 1.5, -1.5], [-1.5, -1.5, 1.5, 1.5]};
+        
+        % Dynamical mapping 
+        dynamics_transform
+        state_transform
     end
 
     properties (GetAccess = public, SetAccess = protected)
         % Time step for the Robotarium
         time_step = 0.033
-        maxLinearVelocity = 0.1
-        maxAngularVelocity = 2*pi
+        max_linear_velocity = 0.1
+        max_angular_velocity = 2*pi
         robot_diameter = 0.08
         number_of_agents
         velocities
@@ -48,17 +52,19 @@ classdef ARobotarium < handle
 
         % Getters
         % Get poses must be implemented independently
-        get_poses(this)
+        get_states(this)
 
         %Update functions
         step(this);
     end
 
     methods
-        function this = ARobotarium(number_of_agents, save_data, show_figure, initial_poses)
+        function this = ARobotarium(number_of_agents, save_data, show_figure, initial_poses, dynamics_transform, state_transform)
             this.number_of_agents = number_of_agents;
             this.save_data = save_data;
             this.show_figure = show_figure;
+            this.dynamics_transform = dynamics_transform;
+            this.state_transform = state_transform;
 
             this.velocities = zeros(2, number_of_agents);
             this.led_commands = zeros(4, number_of_agents);
@@ -90,22 +96,32 @@ classdef ARobotarium < handle
            agents = this.number_of_agents;
         end
 
-        function this = set_velocities(this, ids, vs)
-            N = size(vs, 2);
+        function this = set_inputs(this, ids, inputs)
+            N = size(inputs, 2);
 
             assert(N<=this.number_of_agents, 'Column size of vs (%i) must be <= to number of agents (%i)', ...
                 N, this.number_of_agents);
+            
+            % Transform is f : (inputs, states) -> (v, w)
+            vs = this.dynamics_transform(inputs, this.poses(:, ids));
 
-            % Threshold velocities
-            for i = 1:N
-                if(abs(vs(1, i)) > this.maxLinearVelocity)
-                   vs(1, i) = this.maxLinearVelocity*sign(vs(1,i));
-                end
-
-                if(abs(vs(2, i)) > this.maxAngularVelocity)
-                   vs(2, i) = this.maxAngularVelocity*sign(vs(2, i));
-                end
-            end
+            % Threshold linear velocities
+            idxs = abs(vs(1, :)) > this.max_linear_velocity;
+            vs(1, idxs) = this.max_linear_velocity.*sign(vs(1, idxs));
+            
+            % Threshold angular velocities
+            idxs = abs(vs(2, :)) > this.max_angular_velocity;
+            vs(2, idxs) = this.max_angular_velocity.*sign(vs(2, idxs));
+            
+%             for i = 1:N
+%                 if(abs(vs(1, i)) > this.max_linear_velocity)
+%                    vs(1, i) = this.max_linear_velocity*sign(vs(1, i));
+%                 end
+% 
+%                 if(abs(vs(2, i)) > this.max_angular_velocity)
+%                    vs(2, i) = this.max_angular_velocity*sign(vs(2, i));
+%                 end
+%             end
 
             this.velocities(:, ids) = vs;
         end

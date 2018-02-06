@@ -18,7 +18,8 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
-r = rb.set_number_of_agents(N).set_save_data(false).build();
+r = rb.build('NumberOfAgents', N, 'Dynamics', 'SingleIntegrator', ... 
+    'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
 %% Create the desired Laplacian
 
@@ -39,20 +40,11 @@ state = 0;
 formation_control_gain = 10;
 desired_distance = 0.09;
 
-%% Grab tools we need to convert from single-integrator to unicycle dynamics
-
-% Single-integrator -> unicycle dynamics mapping
-si_to_uni_dyn = create_si_to_uni_mapping2('LinearVelocityGain', 1, 'AngularVelocityLimit', 2);
-% Single-integrator barrier certificates
-si_barrier_cert = create_si_barrier_certificate('SafetyRadius', 0.08);
-% Single-integrator position controller
-si_pos_controller = create_si_position_controller();
-
 for t = 1:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
-    x = r.get_poses();
+    x = r.get_states();
     
     %% Algorithm
     
@@ -93,16 +85,12 @@ for t = 1:iterations
             if(norm(x(1:2, 1) - [0.3 ; -0.2]) < 0.05)
                 state = 0;
             end
-    end
-    
-    %% Use barrier certificate and convert to unicycle dynamics
-    dxi = si_barrier_cert(dxi, x);
-    dxu = si_to_uni_dyn(dxi, x);
+    end    
     
     %% Send velocities to agents
     
     %Set velocities
-    r.set_velocities(1:N, dxu);
+    r.set_inputs(1:N, dxi);
     
     %Iterate experiment
     r.step();

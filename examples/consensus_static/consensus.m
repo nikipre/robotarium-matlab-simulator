@@ -11,23 +11,14 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
-r = rb.set_number_of_agents(N).set_save_data(true).build();
+r = rb.build('NumberOfAgents', N, 'Dynamics', 'SingleIntegrator', ... 
+    'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
 %% Experiment constants
 
 % Generate a cyclic graph Laplacian from our handy utilities.  For this
 % algorithm, any connected graph will yield consensus
 L = cycleGL(N);
-
-%% Grab tools we need to convert from single-integrator to unicycle dynamics
-
-% Gain for the diffeomorphism transformation between single-integrator and
-% unicycle dynamics
-transformation_gain = 0.06;
-[si_to_uni_dyn, uni_to_si_states] = create_si_to_uni_mapping('ProjectionDistance', transformation_gain);
-
-safety_radius = 0.15;
-si_barrier_cert = create_si_barrier_certificate('SafetyRadius', safety_radius);
 
 % Select the number of iterations for the experiment.  This value is
 % arbitrary
@@ -42,18 +33,15 @@ for t = 1:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
-    x = r.get_poses();
+    xi = r.get_states();
     
-    % Convert to SI states
-    xi = uni_to_si_states(x);
+    % Initialize velocity to zero for each agent.  This allows us to sum
+    %over agent i's neighbors
+    dxi = zeros(2, N);
     
     %% Algorithm
     
-    for i = 1:N
-        
-        % Initialize velocity to zero for each agent.  This allows us to sum
-        %over agent i's neighbors
-        dxi(:, i) = [0 ; 0];
+    for i = 1:N       
         
         % Get the topological neighbors of agent i based on the graph
         %Laplacian L
@@ -68,18 +56,11 @@ for t = 1:iterations
         end
     end
     
-    %% Utilize barrier certificates
     
-    dxi = si_barrier_cert(dxi, xi);
-    
-    % Transform the single-integrator to unicycle dynamics using the the
-    % transformation we created earlier
-    dxu = si_to_uni_dyn(dxi, x);
-    
-    %% Send velocities to agents
+    %% Send single-integrator velocities to agents
     
     % Set velocities of agents 1,...,N
-    r.set_velocities(1:N, dxu);
+    r.set_inputs(1:N, dxi);
     
     % Send the previously set velocities to the agents.  This function must be called!
     

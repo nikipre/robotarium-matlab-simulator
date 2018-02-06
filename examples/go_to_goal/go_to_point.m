@@ -13,16 +13,14 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
-r = rb.set_number_of_agents(N).set_save_data(false).build();
+r = rb.build('NumberOfAgents', N, 'Dynamics', 'PointControlled', ...
+    'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
 % Initialize x so that we don't run into problems later.  This isn't always
 % necessary
 x = r.get_poses();
 r.step();
 
-% Create a barrier certificate so that the robots don't collide
-si_barrier_certificate = create_si_barrier_certificate('SafetyRadius', 0.06);
-si_to_uni_dynamics = create_si_to_uni_mapping2();
         
 %Get randomized initial conditions in the robotarium arena
 initial_conditions = generate_initial_conditions(N, 'Width', r.boundaries(2)-r.boundaries(1)-0.1, 'Height', r.boundaries(4)-r.boundaries(3)-0.1, 'Spacing', 0.2);
@@ -36,11 +34,8 @@ controller = create_si_position_controller();
 while(~init_checker(x, initial_conditions))
 
     x = r.get_poses();
-    dxi = controller(x(1:2, :), initial_conditions(1:2, :));
-    dxi = si_barrier_certificate(dxi, x(1:2, :));      
-    dxu = si_to_uni_dynamics(dxi, x);
 
-    r.set_velocities(1:N, dxu);
+    r.set_inputs(1:N, initial_conditions(1:2, :));
     r.step();   
 end
 

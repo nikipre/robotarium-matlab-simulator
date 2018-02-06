@@ -15,7 +15,8 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
-r = rb.set_number_of_agents(N).set_save_data(false).build();
+r = rb.build('NumberOfAgents', N, 'Dynamics', 'SingleIntegrator', ... 
+    'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
 % Select the number of iterations for the experiment.  This value is
 % arbitrary
@@ -26,16 +27,16 @@ for t = 1:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
-    x = r.get_poses();
+    x = r.get_states();
     
     %% Insert your code here!
     
-    % dxu = algorithm(x);
+    % dxi = algorithm(x);
     
     %% Send velocities to agents
     
     % Set velocities of agents 1,...,N
-    r.set_velocities(1:N, dxu);
+    r.set_inputs(1:N, dxi);
     
     % Send the previously set velocities to the agents.  This function must be called!
     r.step();

@@ -53,10 +53,14 @@ classdef RobotariumBuilder < ARobotariumBuilder
            number_of_agents = this.available_agents;
         end
         
-        function robotarium_obj = build(this)
+        function robotarium_obj = build(this, varargin)            
+                               
+            % Get dynamical transform based on input arguments.
+            [this.dynamics_transform, this.state_transform] = this.get_transforms(varargin{:});
             
-            assert(this.number_of_agents > 0, 'You must set the number of agents for this experiment');
+            %% This stuff is all implementation specific 
             
+            % Sort out arena size to randomly select initial positions
             arena_width = this.boundaries(2) - this.boundaries(1);
             arena_height = this.boundaries(4) - this.boundaries(3);
             
@@ -74,7 +78,8 @@ classdef RobotariumBuilder < ARobotariumBuilder
             end
                                                         
             initial_poses(3, :) = rand(1, this.number_of_agents)*2*pi;
-            robotarium_obj = Robotarium(this.number_of_agents, this.save_data, this.show_figure, initial_poses);            
+            robotarium_obj = Robotarium(this.number_of_agents, this.save_data, ...
+            this.show_figure, initial_poses, this.dynamics_transform, this.state_transform);            
         end
     end  
 end
