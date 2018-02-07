@@ -35,7 +35,8 @@ for t = 1:iterations
     
     %% Send velocities to agents
     
-    % Set velocities of agents 1,...,N
+    % The input modality for the robots will change based on the selected
+    % dynamics!
     r.set_inputs(1:N, dxi);
     
     % Send the previously set velocities to the agents.  This function must be called!

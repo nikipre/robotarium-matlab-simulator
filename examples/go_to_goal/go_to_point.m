@@ -13,6 +13,7 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
+% Since we've chosen point-controlled dynamics, the inputs will be points
 r = rb.build('NumberOfAgents', N, 'Dynamics', 'PointControlled', ...
     'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
@@ -35,8 +36,14 @@ init_checker = create_is_initialized('PositionError', 0.01, 'RotationError', 50)
 % dimensional.  The init-checker function needs a 3-dimensional state
 while(~init_checker([x ; zeros(1, N)], initial_conditions))
 
+    % Since we'e chosen point-controlled dynamics, the state will be (x, y)
+    % positions
     x = r.get_states();
 
+    % Since we've chosen point-controlled dynamics, the inputs will be (x,
+    % y)
+    % points (i.e., the first two elements in the 'initial_conditions'
+    % poses
     r.set_inputs(1:N, initial_conditions(1:2, :));
     r.step();   
 end

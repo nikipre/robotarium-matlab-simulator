@@ -15,6 +15,8 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
+% Since we've chosen point-controlled dynamics, the inputs will be (x, y)
+% points
 r = rb.build('NumberOfAgents', N, 'Dynamics', 'PointControlled', ...
 'CollisionAvoidance', true, 'ShowFigure', true, 'SaveData', true);
 
@@ -47,14 +49,14 @@ for t = 1:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
-    x = r.get_states();
-    
-    x_temp = x(1:2,:);
+    % Since we've chosen point-controlled dynamics, the states will be (x,
+    % y) points
+    x = r.get_states();   
     
     %% Algorithm
   
     % Let's make sure we're close enough the the goals
-    if norm(x_goal-x_temp,1)<0.08
+    if norm(x_goal-x,1)<0.08
          flag = 1-flag;
     end
     
@@ -65,7 +67,8 @@ for t = 1:iterations
         x_goal = p_circ(:,N+1:2*N);
     end
         
-    % Set velocities of agents 1,...,N
+    % Since we've chosen point-controlled dynamics, the inputs will be (x,
+    % y) points
     r.set_inputs(1:N, x_goal);
     
     % Send the previously set velocities to the agents.  This function must be called!

@@ -18,11 +18,14 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
+% Since we've chosen single-integrator dynamics, the inputs will be linear
+% velocities
 r = rb.build('NumberOfAgents', N, 'Dynamics', 'SingleIntegrator', ... 
     'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
 %% Get any extra utilities that we need
 
+% Get a single-integrator pose controller for the leader robot
 si_pos_controller = create_si_position_controller();
 
 %% Create the desired Laplacian
@@ -48,6 +51,8 @@ for t = 1:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
+    % Since we've chosen single-integrator dynamics, the states will be (x,
+    % y) points
     x = r.get_states();
     
     %% Algorithm
@@ -93,7 +98,8 @@ for t = 1:iterations
     
     %% Send velocities to agents
     
-    %Set velocities
+    % Since we've chosen single-integrator dynamics, the inputs will be
+    % linear velocities
     r.set_inputs(1:N, dxi);
     
     %Iterate experiment

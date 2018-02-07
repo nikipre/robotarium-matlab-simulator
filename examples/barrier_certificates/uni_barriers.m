@@ -13,6 +13,8 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
+% Since we've chosen unicycle dynamics, the inputs will be linear and
+% angular velocities
 r = rb.build('NumberOfAgents', N, 'Dynamics', 'Unicycle', ...
 'CollisionAvoidance', true, 'ShowFigure', true, 'SaveData', true);
 
@@ -49,6 +51,8 @@ for t = 1:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
+    % Since we've chosen unicycle dynamics, the states will be (x, y,
+    % theta) poses
     x = r.get_states();
     
     %% Algorithm
@@ -82,7 +86,8 @@ for t = 1:iterations
     % Map to unicycle dynamics
     dx = si_to_uni_dyn(dx, x);      
     
-    % Set velocities of agents 1,...,N
+    % Since we've chosen unicycle dynamics, the inputs will be linear and
+    % angular velocities
     r.set_inputs(1:N, dx);
     
     % Send the previously set velocities to the agents.  This function must be called!

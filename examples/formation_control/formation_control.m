@@ -15,6 +15,8 @@ N = 6;
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
+% Since we've chosen single-integrator dynamics, the inputs will be linear
+% velocities
 r = rb.build('NumberOfAgents', N, 'Dynamics', 'SingleIntegrator', ... 
     'CollisionAvoidance', true, 'SaveData', true, 'ShowFigure', true);
 
@@ -60,6 +62,8 @@ for t = 0:iterations
     
     % Retrieve the most recent poses from the Robotarium.  The time delay is
     % approximately 0.033 seconds
+    % Since we've chosen single-integrator dynamics, the states will be (x,
+    % y) points
     x = r.get_states();
     
     %% Algorithm
@@ -86,7 +90,8 @@ for t = 0:iterations
         end 
     end
     
-    % Set velocities of agents 1:N
+    % Since we've chosen single-integrator dynamics, the inputs will be
+    % linear velocities
     r.set_inputs(1:N, dx);
     
     % Send the previously set velocities to the agents.  This function must be called!

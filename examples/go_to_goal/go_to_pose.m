@@ -13,6 +13,7 @@ N = rb.get_available_agents();
 
 % Set the number of agents and whether we would like to save data.  Then,
 % build the Robotarium simulator object!
+% Since we've chosen pose-controlled dynamics, the inputs will be poses.
 r = rb.build('NumberOfAgents', N, 'Dynamics', 'PoseControlled', ...
 'CollisionAvoidance', true, 'ShowFigure', true, 'SaveData', true);
 
@@ -30,8 +31,12 @@ automatic_parker = create_automatic_parking_controller(args{:});
 
 while(~init_checker(x, initial_conditions))
 
+    % Since we've chosen pose-controlled dynamics, the states will be (x,
+    % y, theta) poses.
     x = r.get_states();    
 
+    % Since we've chosen pose-controlled dynamics, the inputs will be (x, y, theta) poses
+    % (i.e., the desired initial conditions)
     r.set_inputs(1:N, initial_conditions);
     r.step();   
 end
